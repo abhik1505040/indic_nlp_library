@@ -11,7 +11,8 @@ import os
 """
 Path to the Indic NLP Resources directory
 """
-INDIC_RESOURCES_PATH=''
+INDIC_RESOURCES_PATH = ''
+GIT_URL = "https://github.com/anoopkunchukuttan/indic_nlp_resources"
 
 def init():
     """
@@ -21,16 +22,36 @@ def init():
         INDIC_RESOURCES_PATH environment variable. If that fails, an exception is raised
     """
     global INDIC_RESOURCES_PATH 
-    try: 
-        if INDIC_RESOURCES_PATH=='':
-            INDIC_RESOURCES_PATH=os.environ['INDIC_RESOURCES_PATH']
-    except Exception as e: 
-        raise IndicNlpException('INDIC_RESOURCES_PATH not set')
+    if INDIC_RESOURCES_PATH == '':
+        INDIC_RESOURCES_PATH = os.environ.get('INDIC_RESOURCES_PATH', "")
+    
+    if not os.path.isdir(INDIC_RESOURCES_PATH):
+        cache_dir = os.path.expanduser(
+            os.path.join('~/.cache', 'indic_nlp_resources')
+        )
+        
+        os.makedirs(
+            os.path.dirname(cache_dir), 
+            exist_ok=True
+        )
+        
+        if not os.path.isdir(cache_dir):
+            from git import Repo, RemoteProgress
+            from tqdm import tqdm
 
-    if INDIC_RESOURCES_PATH=='': 
-        raise IndicNlpException('INDIC_RESOURCES_PATH not set')
+            class CloneProgress(RemoteProgress):
+                def __init__(self):
+                    super().__init__()
+                    self.pbar = tqdm()
 
+                def update(self, op_code, cur_count, max_count=None, message=''):
+                    self.pbar.total = max_count
+                    self.pbar.n = cur_count
+                    self.pbar.refresh()
 
+            Repo.clone_from(GIT_URL, cache_dir, progress=CloneProgress())
+
+        INDIC_RESOURCES_PATH = cache_dir
 
 def get_resources_path(): 
     """
